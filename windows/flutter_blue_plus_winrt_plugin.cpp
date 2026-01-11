@@ -298,21 +298,21 @@ FlutterBluePlusWinrtPlugin::GetCharacteristicAsync(
         }
 
         if (servicesResult.Status() == GattCommunicationStatus::Success) {
-                winrt::guid serviceUuid = utils::parse_uuid(service_uuid_str);
+            for (auto service : servicesResult.Services()) {
                 if (service.Uuid() == serviceUuid) {
-                     winrt::guid charUuid = utils::parse_uuid(characteristic_uuid_str);
-                     auto charsResult = co_await service.GetCharacteristicsForUuidAsync(charUuid, BluetoothCacheMode::Cached);
-                     if (charsResult.Status() != GattCommunicationStatus::Success || charsResult.Characteristics().Size() == 0) {
-                          charsResult = co_await service.GetCharacteristicsForUuidAsync(charUuid, BluetoothCacheMode::Uncached);
-                     }
-                     if (charsResult.Status() == GattCommunicationStatus::Success && charsResult.Characteristics().Size() > 0) {
-                          targetChar = charsResult.Characteristics().GetAt(0);
-                          for (auto c : charsResult.Characteristics()) {
-                                if(instance_id != 0 && static_cast<int32_t>(c.AttributeHandle()) == instance_id) {
-                                    targetChar = c; break;
-                                }
-                          }
-                     }
+                    winrt::guid charUuid = utils::parse_uuid(characteristic_uuid_str);
+                    auto charsResult = co_await service.GetCharacteristicsForUuidAsync(charUuid, BluetoothCacheMode::Cached);
+                    if (charsResult.Status() != GattCommunicationStatus::Success || charsResult.Characteristics().Size() == 0) {
+                        charsResult = co_await service.GetCharacteristicsForUuidAsync(charUuid, BluetoothCacheMode::Uncached);
+                    }
+                    if (charsResult.Status() == GattCommunicationStatus::Success && charsResult.Characteristics().Size() > 0) {
+                        targetChar = charsResult.Characteristics().GetAt(0);
+                        for (auto c : charsResult.Characteristics()) {
+                            if(instance_id != 0 && static_cast<int32_t>(c.AttributeHandle()) == instance_id) {
+                                targetChar = c; break;
+                            }
+                        }
+                    }
                 }
                 if (targetChar) break;
             }
@@ -1339,7 +1339,7 @@ winrt::fire_and_forget FlutterBluePlusWinrtPlugin::PeriodicConnectionCheck() {
             connected_devices_.erase(std::remove_if(connected_devices_.begin(), connected_devices_.end(),
                 [&](const auto& pair) {
                     if (pair.first == remote_id) {
-                        try { auto d = pair.second.as<BluetoothLEDevice>(); if (d) to_close.push_back(d); } catch(...) {}
+                        try { if (auto device = pair.second.template as<BluetoothLEDevice>()) to_close.push_back(device); } catch(...) {}
                         return true;
                     }
                     return false;
@@ -1395,7 +1395,7 @@ void FlutterBluePlusWinrtPlugin::HandleMethodCall(const flutter::MethodCall<flut
             currently_connecting_devices_.erase(std::remove_if(currently_connecting_devices_.begin(), currently_connecting_devices_.end(),
                 [&](const auto& pair) {
                     if (pair.first == remote_id) {
-                        try { if (auto device = pair.second.as<BluetoothLEDevice>()) to_close.push_back(device); } catch(...) {}
+                        try { if (auto device = pair.second.template as<BluetoothLEDevice>()) to_close.push_back(device); } catch(...) {}
                         return true;
                     }
                     return false;
@@ -1404,7 +1404,7 @@ void FlutterBluePlusWinrtPlugin::HandleMethodCall(const flutter::MethodCall<flut
             connected_devices_.erase(std::remove_if(connected_devices_.begin(), connected_devices_.end(),
                 [&](const auto& pair) {
                     if (pair.first == remote_id) {
-                        try { if (auto device = pair.second.as<BluetoothLEDevice>()) to_close.push_back(device); } catch(...) {}
+                        try { if (auto device = pair.second.template as<BluetoothLEDevice>()) to_close.push_back(device); } catch(...) {}
                         return true;
                     }
                     return false;
